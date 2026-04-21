@@ -1,0 +1,59 @@
+# LimaCharlie Detection & Response Rule
+# Detects execution of LaZagne - a credential harvesting / password recovery tool
+# MITRE ATT&CK: T1555 - Credentials from Password Stores
+#
+# Author : lenoshz
+# Lab: SOAR + EDR Automated Incident Response Lab
+
+# ─────────────────────────────────────────────────────────────────
+# DETECT
+# ─────────────────────────────────────────────────────────────────
+events:
+  - NEW_PROCESS
+  - EXISTING_PROCESS
+
+op: and
+rules:
+  # Must be a Windows endpoint
+  - op: is windows
+
+  # Match any of the following LaZagne indicators
+  - op: or
+    rules:
+      # File name ends with lazagne.exe (case-insensitive)
+      - case sensitive: false
+        op: ends with
+        path: event/FILE_PATH
+        value: lazagne.exe
+
+      # Command line contains 'lazagne' (covers renamed binaries run with lazagne args)
+      - case sensitive: false
+        op: contains
+        path: event/COMMAND_LINE
+        value: lazagne
+
+      # Known SHA-256 hash of LaZagne v2.4 release binary
+      - case sensitive: false
+        op: is
+        path: event/HASH
+        value: '3cc5ee93a9ba1fc57389705283b760c8bd61f35e9398bbfa3210e2becf6d4b05'
+
+# ─────────────────────────────────────────────────────────────────
+# RESPOND
+# ─────────────────────────────────────────────────────────────────
+respond:
+  - action: report
+    metadata:
+      author: lenoshz
+      description: >
+        Detects the execution of LaZagne, an open-source credential harvesting tool
+        that extracts stored passwords from browsers, Wi-Fi, databases, and more.
+        Detection is based on file path, command-line arguments, and known binary hash.
+      falsepositives:
+        - Legitimate security testing by authorised pen testers
+        - IT administrators auditing stored credentials on corporate assets
+      level: medium
+      tags:
+        - attack.credential_access
+        - attack.t1555
+      name: lenoshz - HackTool - LaZagne (SOAR-EDR)
